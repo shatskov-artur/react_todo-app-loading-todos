@@ -1,47 +1,44 @@
 /* eslint-disable prettier/prettier */
 import React, { useState } from 'react';
-import './TodoItem.scss';
-import { Todo } from '../../types/Todo';
+import { Todo } from '../types/Todo';
+import { Loader } from './Loader';
 
 interface Props {
   todo: Todo;
-  onDelete: (value: number) => Promise<void>;
-  onUpdate: (value: Todo) => Promise<void>;
+  updateTodo: (value: Todo) => Promise<void>;
+  deleteTodo: (value: number) => Promise<void>;
+  updatingTodoIds: number[];
 }
 
+/* eslint-disable prettier/prettier */
 export const TodoItem: React.FC<Props> = ({
   todo,
-  onDelete,
-  onUpdate,
+  updateTodo,
+  deleteTodo,
+  updatingTodoIds,
 }) => {
   const [focusedTodo, setFocusedTodo] = useState<Todo>();
   const [todoTitleField, setTodoTitleFild] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleFormSave = (formEvent: React.FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
 
-    setLoading(true);
-    onUpdate({ ...todo, title: todoTitleField }).finally(() => {
-      setLoading(false);
+    updateTodo({ ...todo, title: todoTitleField }).finally(() => {
       setFocusedTodo(undefined);
     });
   };
 
   const handleInputChange = () => {
-    setLoading(true);
-
-    onUpdate({
+    updateTodo({
       id: todo.id,
       userId: todo.userId,
       title: todo.title,
       completed: todo.completed === true ? false : true,
-    }).finally(() => setLoading(false));
+    });
   };
 
   const handleRemoveTodo = () => {
-    setLoading(true);
-    onDelete(todo.id).finally(() => setLoading(false));
+    deleteTodo(todo.id);
   };
 
   return (
@@ -92,13 +89,9 @@ export const TodoItem: React.FC<Props> = ({
       </button>
 
       {/* overlay will cover the todo while it is being deleted or updated */}
-      <div
-        data-cy="TodoLoader"
-        className={`modal overlay ${loading ? 'is-active' : ''}`}
-      >
-        <div className="modal-background has-background-white-ter" />
-        <div className="loader" />
-      </div>
+      {updatingTodoIds.includes(todo.id) && (
+        <Loader todoId={todo.id} updatingTodoIds={updatingTodoIds} />
+      )}
     </div>
   );
 };
