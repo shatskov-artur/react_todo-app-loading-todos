@@ -23,9 +23,10 @@ export const TodoItem: React.FC<Props> = ({
   const handleFormSave = (formEvent: React.FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
 
-    updateTodo({ ...todo, title: todoTitleField }).finally(() => {
-      setFocusedTodo(undefined);
-    });
+    updateTodo({ ...todo, title: todoTitleField.trim() })
+      .then(() => {
+        setFocusedTodo(undefined);
+      }).catch();
   };
 
   const handleInputChange = () => {
@@ -39,6 +40,12 @@ export const TodoItem: React.FC<Props> = ({
 
   const handleRemoveTodo = () => {
     deleteTodo(todo.id);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (event.key === 'Escape') {
+      setFocusedTodo(undefined);
+    }
   };
 
   return (
@@ -55,8 +62,19 @@ export const TodoItem: React.FC<Props> = ({
       </label>
 
       {focusedTodo ? (
-        <form onBlur={handleFormSave} onSubmit={handleFormSave}>
+        <form
+          onBlur={event => {
+            event.preventDefault();
+
+            updateTodo({ ...todo, title: todoTitleField.trim() }).then(() => {
+              setFocusedTodo(undefined);
+            }).catch();
+          }}
+          onSubmit={handleFormSave}
+          onKeyDown={(event) => handleKeyDown(event)}
+        >
           <input
+            autoFocus
             data-cy="TodoTitleField"
             type="text"
             className="todo__title-field"
@@ -79,19 +97,20 @@ export const TodoItem: React.FC<Props> = ({
       )}
 
       {/* Remove button appears only on hover */}
-      <button
-        type="button"
-        className="todo__remove"
-        data-cy="TodoDelete"
-        onClick={handleRemoveTodo}
-      >
-        ×
-      </button>
+      {!focusedTodo && (
+        <button
+          type="button"
+          className="todo__remove"
+          data-cy="TodoDelete"
+          onClick={handleRemoveTodo}
+        >
+          ×
+        </button>
+      )}
 
       {/* overlay will cover the todo while it is being deleted or updated */}
-      {updatingTodoIds.includes(todo.id) && (
-        <Loader todoId={todo.id} updatingTodoIds={updatingTodoIds} />
-      )}
+
+      <Loader todoId={todo.id} updatingTodoIds={updatingTodoIds} />
     </div>
   );
 };

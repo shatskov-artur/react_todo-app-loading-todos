@@ -20,13 +20,17 @@ const filterTodos = (initialTodos: Todo[], filter: string): Todo[] => {
   }
 };
 
+const countActive = (todos: Todo[]) => {
+  return todos.filter(todo => todo.completed === false).length;
+};
+
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all');
-  const [loading, setLoading] = useState(false);
   const [updatingTodoIds, setUpdatingTodoIds] = useState<number[]>([]);
+  const [activeCount, setActiveCount] = useState<number>();
   const USER_ID = 3205;
 
   useEffect(() => {
@@ -34,6 +38,7 @@ export const App: React.FC = () => {
       .getTodos(USER_ID)
       .then(todosFromServer => {
         setTodos(todosFromServer);
+        setActiveCount(countActive(todosFromServer));
       })
       .catch(() => {
         setError('Unable to load todos');
@@ -53,8 +58,15 @@ export const App: React.FC = () => {
     }
   }, [error]);
 
+  // useEffect(() => {
+  //   if (updatingTodoIds.some(id => id > Math.max(...todos.map(t => t.id)))) {
+  //     return;
+  //   }
+
+  //   setActiveCount(countActive(todos));
+  // }, [todos, updatingTodoIds]);
+
   const addTodo = (newTodo: Omit<Todo, 'id'>) => {
-    setLoading(true);
     const maxId =
       todos && todos.length > 0 ? Math.max(...todos.map(todo => todo.id)) : 0;
 
@@ -67,9 +79,15 @@ export const App: React.FC = () => {
     return todoService
       .addTodo(newTodo)
       .then(addedTodo => {
-        setTodos(prev =>
-          prev.map(todo => (todo.id === tempId ? addedTodo : todo)),
-        );
+        setTodos(prev => {
+          const updated = prev.map(todo =>
+            todo.id === tempId ? addedTodo : todo,
+          );
+
+          setActiveCount(countActive(updated));
+
+          return updated;
+        });
         setQuery('');
       })
       .catch(() => {
@@ -78,7 +96,6 @@ export const App: React.FC = () => {
         new Error('Unable to add a todo');
       })
       .finally(() => {
-        setLoading(false);
         setUpdatingTodoIds([]);
       });
   };
@@ -89,9 +106,13 @@ export const App: React.FC = () => {
     return todoService
       .deleteTodo(todoId)
       .then(() => {
-        setTodos(currentTodos =>
-          currentTodos?.filter(todo => todo.id != todoId),
-        );
+        setTodos(currentTodos => {
+          const updated = currentTodos.filter(todo => todo.id !== todoId);
+
+          setActiveCount(countActive(updated));
+
+          return updated;
+        });
       })
       .catch(() => {
         setError('Unable to delete a todo');
@@ -113,13 +134,14 @@ export const App: React.FC = () => {
           const index = newTodos.findIndex(todo => todo.id === updatedTodo.id);
 
           newTodos.splice(index, 1, newTodo);
+          setActiveCount(countActive(newTodos));
 
           return newTodos;
         });
       })
       .catch(() => {
         setError('Unable to update a todo');
-        new Error('Unable to update a todo');
+        throw new Error('Unable to update a todo');
       })
       .finally(() => {
         setUpdatingTodoIds(prev => prev.filter(id => id !== updatedTodo.id));
@@ -129,14 +151,14 @@ export const App: React.FC = () => {
   const handleSubmit = (formEvent: React.FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
 
-    if (query.trimStart().length === 0) {
+    if (query.trim().length === 0) {
       setError('Title should not be empty');
 
       return;
     }
 
     const newTodo = {
-      title: query.trimStart(),
+      title: query.trim(),
       userId: USER_ID,
       completed: false,
     };
@@ -155,7 +177,7 @@ export const App: React.FC = () => {
       <div className="todoapp__content">
         <Header
           query={query}
-          loading={loading}
+          updatingTodoIds={updatingTodoIds}
           setQuery={setQuery}
           todos={todos}
           handleSubmit={handleSubmit}
@@ -172,6 +194,8 @@ export const App: React.FC = () => {
 
         {todos.length > 0 && (
           <Footer
+            todos={todos}
+            count={activeCount}
             filter={filter}
             setFilter={setFilter}
             handleClearCompleted={handleClearCompleted}

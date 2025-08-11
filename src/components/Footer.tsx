@@ -1,7 +1,10 @@
 /* eslint-disable prettier/prettier */
 import React from 'react';
+import { Todo } from '../types/Todo';
 
 interface Props {
+  todos: Todo[];
+  count: number;
   filter: string;
   setFilter: (value: 'all' | 'completed' | 'active') => void;
   handleClearCompleted: () => void;
@@ -9,6 +12,8 @@ interface Props {
 
 /* eslint-disable prettier/prettier */
 export const Footer: React.FC<Props> = ({
+  todos,
+  count,
   filter,
   setFilter,
   handleClearCompleted,
@@ -16,7 +21,7 @@ export const Footer: React.FC<Props> = ({
   return (
     <footer className="todoapp__footer" data-cy="Footer">
       <span className="todo-count" data-cy="TodosCounter">
-        3 items left
+        {count} items left
       </span>
 
       {/* Active link should have the 'selected' class */}
@@ -55,6 +60,7 @@ export const Footer: React.FC<Props> = ({
         className="todoapp__clear-completed"
         data-cy="ClearCompletedButton"
         onClick={handleClearCompleted}
+        disabled={todos.every(todo => todo.completed === false)}
       >
         Clear completed
       </button>
